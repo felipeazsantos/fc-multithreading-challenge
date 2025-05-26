@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"flag"
 	"os"
+	"time"
 
 	"github.com/felipeazsantos/pos-goexpert/fc-multithread-challenge/configs"
 	"github.com/felipeazsantos/pos-goexpert/fc-multithread-challenge/internal/api"
@@ -22,7 +23,8 @@ func main() {
 	cepAPI := api.NewCepAPIS(conf)
 
 	conf.LInfo().Printf("start search address from cep: %s\n", cep)
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(time.Second * 1))
+	defer cancel()
 
 	cepAPI.GetAddressByCep(ctx, cep, apiResponse, apiResponseErr)
 
