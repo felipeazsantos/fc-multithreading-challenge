@@ -2,8 +2,9 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"flag"
-	"fmt"
+	"os"
 
 	"github.com/felipeazsantos/pos-goexpert/fc-multithread-challenge/configs"
 	"github.com/felipeazsantos/pos-goexpert/fc-multithread-challenge/internal/api"
@@ -14,8 +15,7 @@ func main() {
 	flag.StringVar(&cep, "cep", "01000000", "cep to search address on external apis")
 	flag.Parse()
 
-	brasilApiResponse := make(chan bool)
-	viaCepResponse := make(chan bool)
+	apiResponse := make(chan map[string]any)
 	apiResponseErr := make(chan error)
 
 	conf := configs.InitLogs()
@@ -24,18 +24,15 @@ func main() {
 	conf.LInfo().Printf("start search address from cep: %s\n", cep)
 	ctx := context.Background()
 
-	go cepAPI.GetAddressFromBrasilCepAPI(ctx, cep, brasilApiResponse, apiResponseErr)
-	go cepAPI.GetAddressFromViaCepAPI(ctx, cep, viaCepResponse, apiResponseErr)
+	cepAPI.GetAddressByCep(ctx, cep, apiResponse, apiResponseErr)
 
 	select {
-	case brasilApi := <-brasilApiResponse:
-		fmt.Println(brasilApi)
-	case viaCepApi := <-viaCepResponse:
-		fmt.Println(viaCepApi)
+	case apiResp := <-apiResponse:
+		json.NewEncoder(os.Stdout).Encode(apiResp)
 	case apiErr := <-apiResponseErr:
-		fmt.Println(apiErr)
+		conf.LErr().Println(apiErr)
 	case ctxErr := <-ctx.Done():
-		fmt.Printf("context error: %v", ctxErr)
+		conf.LErr().Printf("context error: %v", ctxErr)
 	}
 
 }
