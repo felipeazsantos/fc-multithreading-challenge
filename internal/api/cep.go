@@ -10,13 +10,13 @@ import (
 )
 
 const (
-	viacepURL    = "https://brasilapi.com.br/api/cep/v1/%s"
+	viacepURL    = "https://viacep.com.br/ws/%s/json/"
 	brasilApiURL = "https://brasilapi.com.br/api/cep/v1/%s"
 )
 
 var apisUrl = []string{
-	viacepURL,
 	brasilApiURL,
+	viacepURL,
 }
 
 type cepAPI struct {
@@ -33,8 +33,8 @@ func NewCepAPIS(cfg configs.IConfig) *cepAPI {
 
 func (a *cepAPI) GetAddressByCep(ctx context.Context, cep string, responseSuccess chan map[string]any, responseErr chan error) {
 	for _, u := range apisUrl {
-		go func() {
-			url := fmt.Sprintf(u, cep)
+		go func(apiURL string) {
+			url := fmt.Sprintf(apiURL, cep)
 			req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 			if err != nil {
 				a.cfg.LErr().Printf("error when trying create request with context: %v", err)
@@ -50,6 +50,12 @@ func (a *cepAPI) GetAddressByCep(ctx context.Context, cep string, responseSucces
 			}
 			defer response.Body.Close()
 
+			if response.StatusCode != http.StatusOK {
+				a.cfg.LErr().Printf("error status code %d from url %s", response.StatusCode, url)
+				responseErr <- fmt.Errorf("error status code %d from url %s", response.StatusCode, url)
+				return
+			}
+
 			body, err := io.ReadAll(response.Body)
 			if err != nil {
 				a.cfg.LErr().Printf("error parse body from url %s : %v", url, err)
@@ -63,6 +69,6 @@ func (a *cepAPI) GetAddressByCep(ctx context.Context, cep string, responseSucces
 			}
 
 			responseSuccess <- result
-		}()
+		}(u)
 	}
 }

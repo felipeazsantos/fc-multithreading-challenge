@@ -2,9 +2,8 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"flag"
-	"os"
+	"fmt"
 	"time"
 
 	"github.com/felipeazsantos/pos-goexpert/fc-multithread-challenge/configs"
@@ -23,14 +22,15 @@ func main() {
 	cepAPI := api.NewCepAPIS(conf)
 
 	conf.LInfo().Printf("start search address from cep: %s\n", cep)
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(time.Second * 1))
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(time.Second*1))
 	defer cancel()
 
 	cepAPI.GetAddressByCep(ctx, cep, apiResponse, apiResponseErr)
 
 	select {
 	case apiResp := <-apiResponse:
-		json.NewEncoder(os.Stdout).Encode(apiResp)
+		fmt.Printf("api url: %s\n", apiResp["url"])
+		fmt.Printf("address found: %s\n", apiResp["response"])
 	case apiErr := <-apiResponseErr:
 		conf.LErr().Println(apiErr)
 	case ctxErr := <-ctx.Done():
